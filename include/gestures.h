@@ -75,6 +75,7 @@ struct Gestures {
 	/* If equals to epoch time then button is delayed till gesture end.
 	 */
 	struct timeval button_delayed_time;
+	struct timeval click_delayed_time;
 
 	int tap_touching;
 	int tap_released;

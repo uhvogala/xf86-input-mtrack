@@ -230,6 +230,11 @@ int hypot_cmpf(double x, double y, double value);
  */
 int trigger_delayed_button_uncond(struct Gestures* gs);
 
+
 /** }@ */
+void trigger_button_click(struct Gestures* gs,
+			int button, struct timeval* trigger_up_time);
+void trigger_button_up(struct Gestures* gs, int button);
+void trigger_button_down(struct Gestures* gs, int button);
 
 #endif

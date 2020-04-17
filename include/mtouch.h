@@ -79,6 +79,7 @@ int mtouch_delayed(struct MTouch* mt);
 /* #define -MT_TIMER_ANY         1 - reserved */
 #define MT_TIMER_DELAYED_BUTTON 2
 #define MT_TIMER_COASTING       3
+#define MT_TIMER_CLICK			4
 
 void mt_timer_start(struct MTouch *mt, int kind);
 /**

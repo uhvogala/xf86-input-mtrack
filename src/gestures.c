@@ -46,7 +46,7 @@ static void break_coasting(struct Gestures* gs){
 	gs->scroll_speed_x = gs->scroll_speed_y = 0.0f;
 }
 
-static void trigger_button_up(struct Gestures* gs, int button)
+void trigger_button_up(struct Gestures* gs, int button)
 {
 	if (IS_VALID_BUTTON(button)) {
 		if (button == 0 && gs->button_emulate > 0) {
@@ -58,7 +58,7 @@ static void trigger_button_up(struct Gestures* gs, int button)
 	}
 }
 
-static void trigger_button_down(struct Gestures* gs, int button)
+void trigger_button_down(struct Gestures* gs, int button)
 {
 	struct timeval epoch;
 	timerclear(&epoch);
@@ -108,8 +108,10 @@ int trigger_delayed_button_uncond(struct Gestures* gs)
 	timerclear(&gs->button_delayed_time);
 	gs->move_dist = 0; /* don't count movement from delayed button phase in next stroke */
 
-	LOG_DEBUG_GESTURES("trigger_delayed_button: %d up, timer expired\n", button);
-	trigger_button_up(gs, button);
+	if (gs->drag_state != GS_DRAG_ACTIVE) {
+		LOG_DEBUG_GESTURES("trigger_delayed_button: %d up, timer expired\n", button);
+		trigger_button_up(gs, button);
+	}
 
 	return button;
 }
@@ -118,7 +120,7 @@ int trigger_delayed_button_uncond(struct Gestures* gs)
  * If trigger_up_time is NULL or epoch time it will set timer to infinity - button up will
  * be send when user finish gesture.
  */
-static void trigger_button_click(struct Gestures* gs,
+void trigger_button_click(struct Gestures* gs,
 			int button, struct timeval* trigger_up_time)
 {
 #ifdef DEBUG_GESTURES
@@ -555,10 +557,16 @@ static void tapping_update(struct Gestures* gs,
 		button = cfg->tap_4touch - 1;
 	}
 
-	timeraddms(&gs->time, cfg->tap_hold, &tv_tmp); /* How long button should be hold down */
-	trigger_button_click(gs, button, &tv_tmp);
-	if (cfg->drag_enable && button == 0)
-		trigger_drag_ready(gs, cfg);
+	if (button == 0) {
+		timeraddms(&gs->time, cfg->tap_timeout, &tv_tmp);
+		timercp(&gs->click_delayed_time, &tv_tmp);
+		if (cfg->drag_enable) 
+			trigger_drag_ready(gs, cfg);
+	}
+	else {
+		timeraddms(&gs->time, cfg->tap_hold, &tv_tmp); /* How long button should be hold down */
+		trigger_button_click(gs, button, &tv_tmp);
+	}
 
 	gs->move_type = GS_NONE;
 	timeraddms(&gs->time, cfg->gesture_wait, &gs->move_wait);
@@ -1304,6 +1312,11 @@ int gestures_delayed(struct MTouch* mt)
 			++fingers_down;
 	}
 
+
+	if (!isepochtime(&gs->click_delayed_time) && fingers_released == 1) {
+		return MT_TIMER_CLICK;
+	}
+
 	// if there's no delayed button - do nothing
 	if(!IS_VALID_BUTTON(gs->button_delayed))
 		return MT_TIMER_NONE;
@@ -1322,7 +1335,7 @@ int gestures_delayed(struct MTouch* mt)
 
 	if(is_timer_infinite(gs))
 		return MT_TIMER_NONE;
-
+		
 	microtime(&now);
 	//timersub(&now, &mt->gs.time, &mt->gs.dt);
 	//timercp(&mt->gs.time, &now);

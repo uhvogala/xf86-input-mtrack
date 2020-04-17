@@ -265,6 +265,17 @@ void mt_timer_start(struct MTouch *mt, int kind)
 		timeout = timertoms(&delta);
 		break;
 	}
+	case MT_TIMER_CLICK:
+	{
+		struct timeval delta;
+
+		timersub(&gs->click_delayed_time, &gs->time, &delta);
+		timeout = timertoms(&delta);
+
+		timeraddms(&gs->time, mt->cfg.tap_hold, &delta);
+		timercp(&gs->button_delayed_time, &delta);
+		break;
+	}
 
 	case MT_TIMER_COASTING:
 		gs->move_dx = gs->move_dy = 0.0;
@@ -305,6 +316,12 @@ void mt_timer_stop(struct MTouch *mt)
 		break;
 	}
 
+	case MT_TIMER_CLICK:
+	{
+		timerclear(&gs->click_delayed_time);
+		break;
+	}
+
 	case MT_TIMER_COASTING:
 		mt->gs.scroll_speed_x = mt->gs.scroll_speed_y = 0.0;
 		break;
@@ -336,6 +353,18 @@ CARD32 mt_timer_callback(OsTimerPtr timer, CARD32 time, void *arg)
 		gs->move_type = GS_NONE;
 
 		mt_timer_stop(mt);
+		break;
+	}
+
+	case MT_TIMER_CLICK:
+	{
+		int button = 0;
+		timerclear(&gs->click_delayed_time);
+		trigger_button_down(gs, button);
+		post_button(mt, button, GETBIT(gs->buttons, button));
+
+		gs->button_delayed = button;
+		mt_timer_start(mt, MT_TIMER_DELAYED_BUTTON);
 		break;
 	}
 
