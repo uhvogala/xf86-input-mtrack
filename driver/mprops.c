@@ -144,6 +144,9 @@ void mprops_init(struct MConfig* cfg, InputInfoPtr local) {
 
 	fvals[0] = (float)cfg->sensitivity;
 	mprops.sensitivity = atom_init_float(local->dev, MTRACK_PROP_SENSITIVITY, 1, fvals, mprops.float_type);
+	
+	fvals[0] = (float)cfg->acceleration;
+	mprops.acceleration = atom_init_float(local->dev, MTRACK_PROP_ACCELERATION, 1, fvals, mprops.float_type);
 
 	ivals[0] = cfg->touch_down;
 	ivals[1] = cfg->touch_up;
@@ -370,6 +373,19 @@ int mprops_set_property(DeviceIntPtr dev, Atom property, XIPropertyValuePtr prop
 		if (!checkonly) {
 			cfg->sensitivity = fvals[0];
 			LOG_DEBUG_PROPS("set sensitivity to %f\n", cfg->sensitivity);
+		}
+	}
+	else if (property == mprops.acceleration) {
+		if (prop->size != 1 || prop->format != 32 || prop->type != mprops.float_type)
+			return BadMatch;
+
+		fvals = (float*)prop->data;
+		if (fvals[0] < 0)
+			return BadMatch;
+
+		if (!checkonly) {
+			cfg->acceleration = fvals[0];
+			LOG_DEBUG_PROPS("set acceleration to %f\n", cfg->acceleration);
 		}
 	}
 	else if (property == mprops.pressure) {
